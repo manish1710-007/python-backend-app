@@ -1,0 +1,52 @@
+name: Python Package using Conda
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8, 3.9, 3.10]
+
+    steps:
+      - name: Cache Conda packages
+        uses: actions/cache@v2
+        with: 
+          path: |
+            ${{ env.CONDA_PREFIX }}
+          Key: conda-${{ runner.os }}-${{ hashFiles('**/environment.yml') }}
+
+      - uses: actions/checkout@v3   
+
+      - name: Set up Pyhton
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Add conda to system path
+        run: |
+          echo $CONDA/bin >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: |
+          conda env update --file environment.yml --name base
+
+      - name: Lint with flake8
+        run: |
+          conda create -n lint-env --file lint-environment.yml
+          conda activate lint-env
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length-127 --statistics
+
+      - name: Test with pytest
+        run: |
+          conda create -n test.env --file test-environment.yml
+          conda activate test-env
+          pytest
+            
+        
+          
